@@ -1,6 +1,8 @@
 require("dotenv").config();
 require("./config/database").connect();
 const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
@@ -10,16 +12,20 @@ app.use(express.json());
 const User = require("./model/user");
 
 // Register
-app.post("/register", async(req, res) => {
-// our register logic goes here...
-    // Our register logic starts here
+app.post("/register", async (req, res, next) => {
+  // our register logic goes here...
+  // Our register logic starts here
   try {
     // Get user input
     const { first_name, last_name, email, password } = req.body;
 
     // Validate user input
     if (!(email && password && first_name && last_name)) {
-      res.status(400).send("All input is required");
+      return res.status(400).send({
+        code: 400,
+        status: "All input is required",
+        required: "first_name, last_name, email, password",
+      });
     }
 
     // check if user already exist
@@ -29,6 +35,7 @@ app.post("/register", async(req, res) => {
     if (oldUser) {
       return res.status(409).send("User Already Exist. Please Login");
     }
+    
     //Encrypt user password
     encryptedPassword = await bcrypt.hash(password, 10);
 
@@ -58,44 +65,51 @@ app.post("/register", async(req, res) => {
   }
 });
 
-
-
 // Login
 app.post("/login", async (req, res) => {
+  // Our login logic starts here
+  try {
+    // Get user input
+    const { email, password } = req.body;
 
-    // Our login logic starts here
-    try {
-      // Get user input
-      const { email, password } = req.body;
-  
-      // Validate user input
-      if (!(email && password)) {
-        res.status(400).send("All input is required");
-      }
-      // Validate if user exist in our database
-      const user = await User.findOne({ email });
-  
-      if (user && (await bcrypt.compare(password, user.password))) {
-        // Create token
-        const token = jwt.sign(
-          { user_id: user._id, email },
-          process.env.TOKEN_KEY,
-          {
-            expiresIn: "2h",
-          }
-        );
-  
-        // save user token
-        user.token = token;
-  
-        // user
-        res.status(200).json(user);
-      }
-      res.status(400).send("Invalid Credentials");
-    } catch (err) {
-      console.log(err);
+    // Validate user input
+    if (!(email && password)) {
+      res.status(400).send({
+        code: 400,
+        status: "All input is required",
+        required: "email, password",
+      });
     }
-    // Our register logic ends here
-  });
+    // Validate if user exist in our database
+    const user = await User.findOne({ email });
+
+    if (user && (await bcrypt.compare(password, user.password))) {
+      // Create token
+      const token = jwt.sign(
+        { user_id: user._id, email },
+        process.env.TOKEN_KEY,
+        {
+          expiresIn: "2h",
+        }
+      );
+
+      // save user token
+      user.token = token;
+
+      // user
+      res.status(200).json(user);
+    }
+    res.status(400).send("Invalid Credentials");
+  } catch (err) {
+    console.log(err);
+  }
+  // Our register logic ends here
+});
+
+const auth = require("./middleware/auth");
+
+app.post("/welcome", auth, (req, res) => {
+  res.status(200).send("Welcome 🙌 ");
+});
 
 module.exports = app;
