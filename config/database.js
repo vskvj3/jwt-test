@@ -8,14 +8,14 @@ exports.connect = () => {
     .connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      useCreateIndex: true,
-      useFindAndModify: false,
+    //   useCreateIndex: true,
+    //   useFindAndModify: false,
     })
     .then(() => {
-      console.log("Successfully connected to database");
+      console.log("[database.js] Successfully connected to database");
     })
     .catch((error) => {
-      console.log("database connection failed. exiting now...");
+      console.log("[database.js] database connection failed. exiting now...");
       console.error(error);
       process.exit(1);
     });
